@@ -1,0 +1,123 @@
+import { useEffect } from 'react'
+import { Form } from '@/components/ui/Form'
+import Container from '@/components/shared/Container'
+import BottomStickyBar from '@/components/template/BottomStickyBar'
+import GeneralSection from './components/GeneralSection'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import isEmpty from 'lodash/isEmpty'
+import type { ItemFormSchema } from './types'
+import type { ZodType } from 'zod'
+import type { CommonProps } from '@/@types/common'
+import ImageSection from './components/ImageSection'
+import AddOnsSection from './components/AddOnsSection'
+import AddOptionSection from './components/AddOptionSection'
+
+type ItemFormProps = {
+    onFormSubmit: (values: ItemFormSchema) => void
+    defaultValues?: ItemFormSchema
+    newProduct?: boolean
+} & CommonProps
+
+const addOnSchema = z.object({
+    label: z.string().min(1, 'Addon label is required'),
+    price: z.union([z.string(), z.number()], {
+        errorMap: () => ({ message: 'Price required!' }),
+    }),
+})
+
+const optionSchema = z.object({
+    label: z.string().min(1, 'option label is required'),
+    price: z.union([z.string(), z.number()], {
+        errorMap: () => ({ message: 'Price required!' }),
+    }),
+})
+
+const validationSchema: ZodType<ItemFormSchema> = z.object({
+    name: z.string().min(1, { message: 'Item Name is required!' }),
+    description: z.string().optional(),
+    price: z.union([z.string(), z.number()], {
+        errorMap: () => ({ message: 'Price is required!' }),
+    }),
+    imgList: z
+        .array(
+            z.object({
+                id: z.string(),
+                name: z.string(),
+                img: z.string(),
+            }),
+        )
+        .min(1, { message: 'At least 1 Image is required!' }),
+    categoryId: z.string().min(1, { message: 'Item category is required!' }),
+    addOns: z.array(addOnSchema).optional(),
+    options: z.array(optionSchema).optional(),
+    isVegetarian: z.boolean().optional(),
+    isAvailable: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+    menu: z.string().optional(),
+})
+
+const ItemForm = (props: ItemFormProps) => {
+    const {
+        onFormSubmit,
+        defaultValues = {
+            imgList: [],
+        },
+        children,
+    } = props
+
+    const {
+        handleSubmit,
+        reset,
+        formState: { errors },
+        control,
+    } = useForm<ItemFormSchema>({
+        defaultValues: {
+            ...defaultValues,
+
+            options: [
+                { label: 'Large', price: '' },
+                { label: 'Medium', price: '' },
+            ],
+        },
+
+        resolver: zodResolver(validationSchema),
+    })
+
+    useEffect(() => {
+        if (!isEmpty(defaultValues)) {
+            reset(defaultValues)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify(defaultValues)])
+
+    const onSubmit = (values: ItemFormSchema) => {
+        onFormSubmit?.(values)
+    }
+
+    return (
+        <Form
+            className="flex w-full h-full"
+            containerClassName="flex flex-col w-full justify-between"
+            onSubmit={handleSubmit(onSubmit)}
+        >
+            <Container>
+                <div className="flex flex-col gap-4">
+                    <ImageSection control={control} errors={errors} />
+
+                    <GeneralSection control={control} errors={errors} />
+
+                    <AddOnsSection control={control} errors={errors} />
+
+                    <AddOptionSection control={control} errors={errors} />
+                    {/* <AttributeSection control={control} errors={errors} /> */}
+                </div>
+            </Container>
+
+            <BottomStickyBar>{children}</BottomStickyBar>
+        </Form>
+    )
+}
+
+export default ItemForm

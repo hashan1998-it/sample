@@ -1,0 +1,42 @@
+export const menuData = [
+    {
+        id: '1',
+        name: 'Menu1',
+        description: 'A trendy summer collection featuring stylish outfits.',
+        categories: ['Clothing', 'Accessories'],
+        items: ['Dress001', 'Sunglasses002', 'Hat003'],
+        outlets: ['OutletA', 'OutletB'],
+    },
+    {
+        id: '2',
+        name: 'Menu2',
+        description: 'Latest gadgets and devices for tech enthusiasts.',
+        categories: ['Electronics', 'Accessories'],
+        items: ['Smartphone001', 'Laptop002', 'Headphones003'],
+        outlets: ['OutletC', 'OutletD'],
+    },
+    {
+        id: '3',
+        name: 'Menu3',
+        description: 'High-quality sports gear for all kinds of athletes.',
+        categories: ['Sports', 'Fitness'],
+        items: ['Football001', 'RunningShoes002', 'GymGloves003'],
+        outlets: ['OutletE', 'OutletF'],
+    },
+    {
+        id: '4',
+        name: 'Menu4',
+        description: 'Premium collection of high-end watches.',
+        categories: ['Watches', 'Luxury'],
+        items: ['Rolex001', 'Omega002', 'TagHeuer003'],
+        outlets: ['OutletG', 'OutletH'],
+    },
+    {
+        id: '5',
+        name: 'Menu5',
+        description: 'Everyday essentials to make your home comfortable.',
+        categories: ['Furniture', 'Kitchen'],
+        items: ['Sofa001', 'Microwave002', 'Blender003'],
+        outlets: ['OutletI', 'OutletJ'],
+    },
+]
