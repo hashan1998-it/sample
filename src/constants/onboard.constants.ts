@@ -1,5 +1,5 @@
 // utils/constants.ts - Fixed version
-import type { SelectOption } from '../@types/onboarding'
+import type { SelectOption } from '../@types/onboard'
 
 export const ONBOARDING_STEPS = {
     STEP_ONE: 1,

@@ -1,15 +1,14 @@
+// src/views/onboard/Forms/OpeningHoursForm.tsx - Updated version
 import React, { useState } from 'react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Switcher from '@/components/ui/Switcher'
 import { useFormValidation } from '../../../utils/hooks/useFormValidation'
 import { openingHoursValidation } from '../../../utils/validations/onboardValidationRules'
-import { OnboardingService } from '@/services/OnboardingService'
 import type {
     OpeningHoursFormProps,
     OpeningHours,
     DaySchedule,
-    FormData,
 } from '../../../@types/onboarding'
 
 const daysOfWeek = [
@@ -27,7 +26,6 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
     onSubmit,
     onBack,
 }) => {
-    const [loading, setLoading] = useState<boolean>(false)
     const [scheduleMode, setScheduleMode] = useState<'daily' | 'customize'>(
         data.scheduleMode || 'daily',
     )
@@ -46,7 +44,7 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
     const [daySchedules, setDaySchedules] =
         useState<Record<string, DaySchedule>>(initialDaySchedules)
 
-    const { formData, handleInputChange, validate } = useFormValidation<
+    const { formData, errors, handleInputChange, validate } = useFormValidation<
         Pick<OpeningHours, 'dailyOpenTime' | 'dailyCloseTime'>
     >(
         {
@@ -94,61 +92,75 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
         })
     }
 
+    const validateCustomSchedule = (): boolean => {
+        // Check if at least one day is open
+        const hasOpenDay = Object.values(daySchedules).some(schedule => schedule.isOpen)
+        if (!hasOpenDay) {
+            return false
+        }
+
+        // Validate time formats for open days
+        for (const schedule of Object.values(daySchedules)) {
+            if (schedule.isOpen) {
+                const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+                if (!timeRegex.test(schedule.openTime) || !timeRegex.test(schedule.closeTime)) {
+                    return false
+                }
+                
+                // Check if close time is after open time
+                const [openHour, openMin] = schedule.openTime.split(':').map(Number)
+                const [closeHour, closeMin] = schedule.closeTime.split(':').map(Number)
+                const openMinutes = openHour * 60 + openMin
+                const closeMinutes = closeHour * 60 + closeMin
+                
+                if (closeMinutes <= openMinutes) {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
     const handleSubmit = async (): Promise<void> => {
         // Validate based on current mode
-        const isValid = scheduleMode === 'daily' ? validate() : true
+        let isValid = false
+        
+        if (scheduleMode === 'daily') {
+            isValid = validate()
+            
+            if (isValid) {
+                // Additional validation for daily mode - ensure close time is after open time
+                const [openHour, openMin] = (formData.dailyOpenTime || '09:00').split(':').map(Number)
+                const [closeHour, closeMin] = (formData.dailyCloseTime || '16:00').split(':').map(Number)
+                const openMinutes = openHour * 60 + openMin
+                const closeMinutes = closeHour * 60 + closeMin
+                
+                if (closeMinutes <= openMinutes) {
+                    isValid = false
+                }
+            }
+        } else {
+            isValid = validateCustomSchedule()
+        }
 
         if (!isValid) {
             return
         }
 
-        setLoading(true)
-        try {
-            const openingHoursData: OpeningHours = {
-                scheduleMode,
-                ...(scheduleMode === 'daily'
-                    ? {
-                          dailyOpenTime: formData.dailyOpenTime ?? '09:00',
-                          dailyCloseTime: formData.dailyCloseTime ?? '16:00',
-                      }
-                    : {
-                          daySchedules,
-                      }),
-            }
-
-            // Type assertion to ensure we have all required FormData properties
-            const formDataToSubmit: FormData = {
-                ...data,
-                openingHours: openingHoursData,
-            } as FormData
-
-            const result = await OnboardingService.apiCompleteOnboarding(
-                formDataToSubmit,
-            )
-
-            if (result.success) {
-                onSubmit(openingHoursData)
-            } else {
-                console.error('Submission failed:', result.error)
-                // Handle error appropriately - maybe show a toast or error message
-            }
-        } catch (error) {
-            console.error('Submission error:', error)
-            // Continue anyway for demo purposes
-            onSubmit({
-                scheduleMode,
-                ...(scheduleMode === 'daily'
-                    ? {
-                          dailyOpenTime: formData.dailyOpenTime ?? '09:00',
-                          dailyCloseTime: formData.dailyCloseTime ?? '16:00',
-                      }
-                    : {
-                          daySchedules,
-                      }),
-            })
-        } finally {
-            setLoading(false)
+        const openingHoursData: OpeningHours = {
+            scheduleMode,
+            ...(scheduleMode === 'daily'
+                ? {
+                      dailyOpenTime: formData.dailyOpenTime ?? '09:00',
+                      dailyCloseTime: formData.dailyCloseTime ?? '16:00',
+                  }
+                : {
+                      daySchedules,
+                  }),
         }
+
+        onSubmit(openingHoursData)
     }
 
     const handleCancel = (): void => {
@@ -161,14 +173,14 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
             <div className="flex-1 space-y-4">
                 <div className="mb-3">
                     <h2 className="text-base font-medium text-gray-800 mb-3">
-                        Merchant Information
+                        Opening Hours
                     </h2>
                 </div>
 
                 {/* Opening Hours Mode Selector */}
                 <div className="mb-4">
                     <label className="text-sm font-medium text-gray-700 mb-3 block">
-                        Opening Hours
+                        Schedule Type
                         <span className="text-red-500 ml-1">*</span>
                     </label>
 
@@ -183,9 +195,10 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                             size="sm"
+                            type="button"
                             onClick={() => handleModeChange('daily')}
                         >
-                            Daily
+                            Same Daily Hours
                         </Button>
                         <Button
                             variant={
@@ -199,9 +212,10 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                             size="sm"
+                            type="button"
                             onClick={() => handleModeChange('customize')}
                         >
-                            Customize
+                            Custom Schedule
                         </Button>
                     </div>
                 </div>
@@ -213,34 +227,42 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                             These hours will apply to all days.
                         </p>
 
-                        <div className="flex gap-4 items-center">
+                        <div className="flex gap-4 items-start">
                             <div className="flex-1">
                                 <label className="text-sm text-gray-600 block mb-1">
-                                    From
+                                    Opening Time
                                 </label>
                                 <Input
                                     type="time"
                                     value={formData.dailyOpenTime}
                                     size="sm"
                                     className="w-full"
-                                    onChange={handleInputChange(
-                                        'dailyOpenTime',
-                                    )}
+                                    invalid={!!errors.dailyOpenTime}
+                                    onChange={handleInputChange('dailyOpenTime')}
                                 />
+                                {errors.dailyOpenTime && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                        {errors.dailyOpenTime}
+                                    </p>
+                                )}
                             </div>
                             <div className="flex-1">
                                 <label className="text-sm text-gray-600 block mb-1">
-                                    To
+                                    Closing Time
                                 </label>
                                 <Input
                                     type="time"
                                     value={formData.dailyCloseTime}
                                     size="sm"
                                     className="w-full"
-                                    onChange={handleInputChange(
-                                        'dailyCloseTime',
-                                    )}
+                                    invalid={!!errors.dailyCloseTime}
+                                    onChange={handleInputChange('dailyCloseTime')}
                                 />
+                                {errors.dailyCloseTime && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                        {errors.dailyCloseTime}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -250,11 +272,10 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                 {scheduleMode === 'customize' && (
                     <div className="space-y-4">
                         <p className="text-sm text-gray-600">
-                            Set hours for the current day. Customize each
-                            day&apos;s schedule below.
+                            Set individual hours for each day. At least one day must be open.
                         </p>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {daysOfWeek.map((day) => {
                                 const dayKey = day.toLowerCase()
                                 const daySchedule = daySchedules[dayKey]
@@ -274,9 +295,9 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                                         </div>
 
                                         {daySchedule?.isOpen && (
-                                            <div className="flex gap-4 items-center pl-4">
+                                            <div className="flex gap-3 items-center pl-4">
                                                 <div className="flex-1">
-                                                    <label className="text-sm text-gray-600 block mb-1">
+                                                    <label className="text-xs text-gray-500 block mb-1">
                                                         From
                                                     </label>
                                                     <Input
@@ -294,7 +315,7 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                                                     />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <label className="text-sm text-gray-600 block mb-1">
+                                                    <label className="text-xs text-gray-500 block mb-1">
                                                         To
                                                     </label>
                                                     <Input
@@ -313,6 +334,12 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                                                 </div>
                                             </div>
                                         )}
+
+                                        {daySchedule?.isOpen === false && (
+                                            <div className="pl-4">
+                                                <p className="text-xs text-gray-500">Closed</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
@@ -328,19 +355,19 @@ export const OpeningHoursForm: React.FC<OpeningHoursFormProps> = ({
                         variant="default"
                         className="flex-1"
                         size="sm"
-                        disabled={loading}
+                        type="button"
                         onClick={handleCancel}
                     >
-                        Cancel
+                        Go Back
                     </Button>
                     <Button
                         variant="solid"
                         className="flex-1 bg-black text-white hover:bg-gray-800"
                         size="sm"
-                        loading={loading}
+                        type="button"
                         onClick={handleSubmit}
                     >
-                        Submit
+                        Complete Setup
                     </Button>
                 </div>
             </div>

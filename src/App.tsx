@@ -4,7 +4,6 @@ import Layout from '@/components/layouts'
 import Views from '@/views'
 import appConfig from './configs/app.config'
 import { Auth0Provider } from '@auth0/auth0-react'
-//import AuthRedirectGuard from './pages/AuthRedirectGuard'
 
 if (appConfig.enableMock) {
     import('./mock')

@@ -3,7 +3,7 @@ import React from 'react'
 import Logo from '@/components/template/Logo'
 import { StepProgress } from '@/components/ui/Progress/StepProgress'
 import { ONBOARDING_STEPS } from '../../../constants/onboard.constants'
-import type { OnboardingLayoutProps } from '../../../@types/onboarding'
+import type { OnboardingLayoutProps } from '@/@types/onboard'
 
 export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     children,

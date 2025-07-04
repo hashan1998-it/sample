@@ -10,7 +10,7 @@ import type {
     MerchantInfo,
     MerchantAddress,
     OpeningHours,
-} from '../../@types/onboarding'
+} from '../../@types/onboard'
 
 export const useOnboardingFlow = (): OnboardingFlowReturn => {
     const [currentStep, setCurrentStep] = useState<number>(

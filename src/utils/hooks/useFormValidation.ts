@@ -4,7 +4,7 @@ import type {
     ValidationRules,
     FormErrors,
     TouchedFields,
-} from '../../@types/onboarding'
+} from '../../@types/onboard'
 
 // Fixed FormHookReturn interface
 export interface FormHookReturn<T = Record<string, unknown>> {
@@ -93,7 +93,8 @@ export const useFormValidation = <T extends Record<string, unknown>>(
                 if (rule.required && (!value || !value.toString().trim())) {
                     setErrors((prev) => ({
                         ...prev,
-                        [field]: rule.message || `${capitalizedField} is required`,
+                        [field]:
+                            rule.message || `${capitalizedField} is required`,
                     }))
                 } else if (
                     rule.email &&
@@ -117,7 +118,8 @@ export const useFormValidation = <T extends Record<string, unknown>>(
                     setErrors((prev) => ({
                         ...prev,
                         [field]:
-                            rule.patternMessage || `${capitalizedField} format is invalid`,
+                            rule.patternMessage ||
+                            `${capitalizedField} format is invalid`,
                     }))
                 } else if (rule.customValidator && value) {
                     const customError = rule.customValidator(value)
@@ -153,7 +155,8 @@ export const useFormValidation = <T extends Record<string, unknown>>(
             const capitalizedField = capitalizeFieldName(field)
 
             if (rule.required && (!value || !value.toString().trim())) {
-                newErrors[field] = rule.message || `${capitalizedField} is required`
+                newErrors[field] =
+                    rule.message || `${capitalizedField} is required`
             } else if (
                 rule.email &&
                 value &&
@@ -169,7 +172,8 @@ export const useFormValidation = <T extends Record<string, unknown>>(
                     `${capitalizedField} must be at least ${rule.minLength} characters`
             } else if (rule.pattern && value && !rule.pattern.test(value)) {
                 newErrors[field] =
-                    rule.patternMessage || `${capitalizedField} format is invalid`
+                    rule.patternMessage ||
+                    `${capitalizedField} format is invalid`
             } else if (rule.customValidator && value) {
                 const customError = rule.customValidator(value)
                 if (customError) {

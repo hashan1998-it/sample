@@ -8,7 +8,7 @@ import { personalInfoValidation } from '../../../utils/validations/onboardValida
 import type {
     PersonalInfoFormProps,
     PersonalInfo,
-} from '../../../@types/onboarding'
+} from '../../../@types/onboard'
 
 export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     data = {},

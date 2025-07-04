@@ -1,4 +1,4 @@
-import { FormData, CompletionStatus, FormSummary } from '../@types/onboarding'
+import { FormData, CompletionStatus, FormSummary } from '../@types/onboard'
 
 export const getInitialFormData = (): FormData => ({
     personalInfo: {

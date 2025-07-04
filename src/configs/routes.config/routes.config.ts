@@ -1,3 +1,4 @@
+// src/configs/routes.config/routes.config.ts - Updated with AuthRedirectGuard integration
 import { lazy } from 'react'
 import authRoute from './authRoute'
 import othersRoute from './othersRoute'
@@ -12,7 +13,6 @@ export const protectedRoutes: Routes = [
         component: lazy(() => import('@/views/overview/Overview')),
         authority: [],
     },
-
     {
         key: 'outlets',
         path: '/outlets',
@@ -43,7 +43,6 @@ export const protectedRoutes: Routes = [
         component: lazy(() => import('@/views/menus/MenuCreate')),
         authority: [],
     },
-
     {
         key: 'menus',
         path: '/menus/edit/:id',
@@ -56,12 +55,6 @@ export const protectedRoutes: Routes = [
         component: lazy(() => import('@/views/menus/ItemMenuEdit')),
         authority: [],
     },
-    // {
-    //     key: 'foods',
-    //     path: '/foods',
-    //     component: lazy(() => import('')),
-    //     authority: [],
-    // },
     {
         key: 'foods.items',
         path: '/foods/items',
@@ -118,24 +111,5 @@ export const protectedRoutes: Routes = [
         component: lazy(() => import('@/views/complaints/Complaints')),
         authority: [],
     },
-    // {
-    //     key: 'settings',
-    //     path: '/settings',
-    //     component: lazy(() => import('@/views/demo/Settings')),
-    //     authority: [],
-    // },
-    // {
-    //     key: 'settings.account',
-    //     path: '/settings/account',
-    //     component: lazy(() => import('@/views/demo/Settings')),
-    //     authority: [],
-    // },
-    // {
-    //     key: 'settings.restaurant',
-    //     path: '/settings/restaurant',
-    //     component: lazy(() => import('@/views/demo/Settings')),
-    //     authority: [],
-    // },
-
     ...othersRoute,
 ]

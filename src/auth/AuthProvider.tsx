@@ -1,19 +1,26 @@
-import { useRef, useImperativeHandle } from 'react'
+import {
+    useRef,
+    useImperativeHandle,
+    useCallback,
+    useMemo,
+    forwardRef,
+} from 'react'
 import AuthContext from './AuthContext'
 import appConfig from '@/configs/app.config'
 import { useSessionUser, useToken } from '@/store/authStore'
 import { apiSignIn, apiSignOut, apiSignUp } from '@/services/AuthService'
+import { apiCheckOnboardingStatus } from '@/services/OnboardService'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
 import { useNavigate } from 'react-router-dom'
 import type {
     SignInCredential,
     SignUpCredential,
-    AuthResult,
     OauthSignInCallbackPayload,
     User,
     Token,
+    AuthRequestStatus,
 } from '@/@types/auth'
-import type { ReactNode, Ref } from 'react'
+import type { ReactNode } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 
 type AuthProviderProps = { children: ReactNode }
@@ -22,17 +29,54 @@ export type IsolatedNavigatorRef = {
     navigate: NavigateFunction
 }
 
-const IsolatedNavigator = ({ ref }: { ref: Ref<IsolatedNavigatorRef> }) => {
-    const navigate = useNavigate()
+type AuthResult = { status: AuthRequestStatus; message: string }
 
-    useImperativeHandle(ref, () => {
-        return {
-            navigate,
+// Utility to extract error message from API errors
+function extractErrorMessage(error: unknown): string {
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: unknown }).response === 'object' &&
+        (error as { response: unknown }).response !== null
+    ) {
+        const response = (error as { response: unknown }).response
+        if (
+            typeof response === 'object' &&
+            response !== null &&
+            'data' in response &&
+            typeof (response as { data?: unknown }).data === 'object' &&
+            (response as { data: unknown }).data !== null
+        ) {
+            const data = (response as { data: unknown }).data
+            if (
+                typeof data === 'object' &&
+                data !== null &&
+                'message' in data &&
+                typeof (data as { message?: unknown }).message === 'string'
+            ) {
+                return (data as { message: string }).message
+            }
         }
-    }, [navigate])
-
-    return <></>
+    }
+    if (
+        typeof error === 'object' &&
+        error &&
+        'toString' in error &&
+        typeof error.toString === 'function'
+    ) {
+        return error.toString()
+    }
+    return 'Unknown error'
 }
+
+// ForwardRef for IsolatedNavigator
+const IsolatedNavigator = forwardRef<IsolatedNavigatorRef>((_, ref) => {
+    const navigate = useNavigate()
+    useImperativeHandle(ref, () => ({ navigate }), [navigate])
+    return null
+})
+IsolatedNavigator.displayName = 'IsolatedNavigator'
 
 function AuthProvider({ children }: AuthProviderProps) {
     const signedIn = useSessionUser((state) => state.session.signedIn)
@@ -47,107 +91,113 @@ function AuthProvider({ children }: AuthProviderProps) {
 
     const navigatorRef = useRef<IsolatedNavigatorRef>(null)
 
-    const redirect = () => {
+    const redirectAfterAuth = useCallback(async (isSignUp: boolean = false) => {
         const search = window.location.search
         const params = new URLSearchParams(search)
         const redirectUrl = params.get(REDIRECT_URL_KEY)
 
-        navigatorRef.current?.navigate(
-            redirectUrl ? redirectUrl : appConfig.authenticatedEntryPath,
-        )
-    }
-
-    const handleSignIn = (tokens: Token, user?: User) => {
-        setToken(tokens.accessToken)
-        setSessionSignedIn(true)
-
-        if (user) {
-            setUser(user)
+        if (redirectUrl) {
+            navigatorRef.current?.navigate(redirectUrl)
+            return
         }
-    }
 
-    const handleSignOut = () => {
+        try {
+            const status = await apiCheckOnboardingStatus()
+            if (isSignUp || status.shouldRedirectToOnboard) {
+                navigatorRef.current?.navigate('/onboard')
+            } else {
+                navigatorRef.current?.navigate(appConfig.authenticatedEntryPath)
+            }
+        } catch {
+            const fallbackPath = isSignUp
+                ? '/onboard'
+                : appConfig.authenticatedEntryPath
+            navigatorRef.current?.navigate(fallbackPath)
+        }
+    }, [])
+
+    const handleSignIn = useCallback(
+        (tokens: Token, user?: User) => {
+            setToken(tokens.accessToken)
+            setSessionSignedIn(true)
+            if (user) setUser(user)
+        },
+        [setToken, setSessionSignedIn, setUser],
+    )
+
+    const handleSignOut = useCallback(() => {
         setToken('')
         setUser({})
         setSessionSignedIn(false)
-    }
+    }, [setToken, setUser, setSessionSignedIn])
 
-    const signIn = async (values: SignInCredential): AuthResult => {
-        try {
-            const resp = await apiSignIn(values)
-            if (resp) {
-                handleSignIn({ accessToken: resp.token }, resp.user)
-                redirect()
-                return {
-                    status: 'success',
-                    message: '',
+    const signIn = useCallback(
+        async (values: SignInCredential): Promise<AuthResult> => {
+            try {
+                const resp = await apiSignIn(values)
+                if (resp) {
+                    handleSignIn({ accessToken: resp.token }, resp.user)
+                    await redirectAfterAuth(false)
+                    return { status: 'success', message: '' }
                 }
+                return { status: 'failed', message: 'Unable to sign in' }
+            } catch (error: unknown) {
+                return { status: 'failed', message: extractErrorMessage(error) }
             }
-            return {
-                status: 'failed',
-                message: 'Unable to sign in',
-            }
-            // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-        } catch (errors: any) {
-            return {
-                status: 'failed',
-                message: errors?.response?.data?.message || errors.toString(),
-            }
-        }
-    }
+        },
+        [handleSignIn, redirectAfterAuth],
+    )
 
-    const signUp = async (values: SignUpCredential): AuthResult => {
-        try {
-            const resp = await apiSignUp(values)
-            if (resp) {
-                handleSignIn({ accessToken: resp.token }, resp.user)
-                redirect()
-                return {
-                    status: 'success',
-                    message: '',
+    const signUp = useCallback(
+        async (values: SignUpCredential): Promise<AuthResult> => {
+            try {
+                const resp = await apiSignUp(values)
+                if (resp) {
+                    handleSignIn({ accessToken: resp.token }, resp.user)
+                    await redirectAfterAuth(true)
+                    return { status: 'success', message: '' }
                 }
+                return { status: 'failed', message: 'Unable to sign up' }
+            } catch (error: unknown) {
+                return { status: 'failed', message: extractErrorMessage(error) }
             }
-            return {
-                status: 'failed',
-                message: 'Unable to sign up',
-            }
-            // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-        } catch (errors: any) {
-            return {
-                status: 'failed',
-                message: errors?.response?.data?.message || errors.toString(),
-            }
-        }
-    }
+        },
+        [handleSignIn, redirectAfterAuth],
+    )
 
-    const signOut = async () => {
+    const signOut = useCallback(async () => {
         try {
             await apiSignOut()
         } finally {
             handleSignOut()
             navigatorRef.current?.navigate(appConfig.unAuthenticatedEntryPath)
         }
-    }
-    const oAuthSignIn = (
-        callback: (payload: OauthSignInCallbackPayload) => void,
-    ) => {
-        callback({
-            onSignIn: handleSignIn,
-            redirect,
-        })
-    }
+    }, [handleSignOut])
+
+    const oAuthSignIn = useCallback(
+        (callback: (payload: OauthSignInCallbackPayload) => void) => {
+            callback({
+                onSignIn: handleSignIn,
+                redirect: () => redirectAfterAuth(false),
+            })
+        },
+        [handleSignIn, redirectAfterAuth],
+    )
+
+    const contextValue = useMemo(
+        () => ({
+            authenticated,
+            user,
+            signIn,
+            signUp,
+            signOut,
+            oAuthSignIn,
+        }),
+        [authenticated, user, signIn, signUp, signOut, oAuthSignIn],
+    )
 
     return (
-        <AuthContext.Provider
-            value={{
-                authenticated,
-                user,
-                signIn,
-                signUp,
-                signOut,
-                oAuthSignIn,
-            }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
             <IsolatedNavigator ref={navigatorRef} />
         </AuthContext.Provider>

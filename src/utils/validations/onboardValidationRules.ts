@@ -6,7 +6,7 @@ import type {
     ValidationRules,
     ValidationRule,
     FormErrors,
-} from '../../@types/onboarding'
+} from '../../@types/onboard'
 
 export const personalInfoValidation: ValidationRules = {
     firstName: {

@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 
 interface SignInFormProps extends CommonProps {
-    disableSubmit?: boolean
+    disableSubmit?: boolean | undefined
     passwordHint?: string | ReactNode
     setMessage?: (message: string) => void
 }

@@ -21,17 +21,17 @@ export interface InputProps
             InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement>,
             'size' | 'prefix'
         > {
-    asElement?: ElementType
-    disabled?: boolean
-    invalid?: boolean
+    asElement?: ElementType | undefined
+    disabled?: boolean | undefined
+    invalid?: boolean | undefined
     prefix?: string | ReactNode
-    rows?: number
-    ref?: Ref<ElementType | HTMLInputElement | HTMLTextAreaElement>
+    rows?: number | undefined
+    ref?: Ref<ElementType | HTMLInputElement | HTMLTextAreaElement> | undefined
     size?: TypeAttributes.ControlSize
     suffix?: string | ReactNode
-    textArea?: boolean
+    textArea?: boolean | undefined
     type?: HTMLInputTypeAttribute
-    unstyle?: boolean
+    unstyle?: boolean | undefined
 }
 
 const Input = (props: InputProps) => {

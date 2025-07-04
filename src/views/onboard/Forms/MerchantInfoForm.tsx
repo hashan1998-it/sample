@@ -1,4 +1,3 @@
-// components/MerchantInfoForm.tsx
 import React, { useState, useMemo } from 'react'
 import Button from '@/components/ui/Button'
 import FormItem from '@/components/ui/Form/FormItem'
@@ -6,12 +5,8 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import { useFormValidation } from '../../../utils/hooks/useFormValidation'
 import { merchantInfoValidation } from '../../../utils/validations/onboardValidationRules'
-import { OnboardingService } from '@/services/OnboardingService'
 import { countryList } from '@/constants/countries.constant'
-import type {
-    MerchantInfoFormProps,
-    SelectOption,
-} from '../../../@types/onboarding'
+import type { MerchantInfoFormProps, SelectOption } from '@/@types/onboard'
 import type { SingleValue } from 'react-select'
 
 export const MerchantInfoForm: React.FC<MerchantInfoFormProps> = ({
@@ -69,7 +64,7 @@ export const MerchantInfoForm: React.FC<MerchantInfoFormProps> = ({
                     value: value,
                 },
             } as React.ChangeEvent<HTMLInputElement>
-            
+
             handleInputChange('contactNumber')(newEvent)
         }
     }
@@ -87,20 +82,11 @@ export const MerchantInfoForm: React.FC<MerchantInfoFormProps> = ({
 
         setLoading(true)
         try {
-            const result = await OnboardingService.apiValidateStep(
-                'merchant',
-                formData,
-            )
-            
-            if (result.success) {
-                onNext(formData)
-            } else {
-                console.error('Validation failed:', result.error)
-                // Handle validation error - you might want to show a toast or error message
-            }
+            // Simple validation - just proceed for now
+            await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate API call
+            onNext(formData)
         } catch (error) {
             console.error('Validation error:', error)
-            // In production, you might want to show an error message instead of proceeding
             onNext(formData)
         } finally {
             setLoading(false)

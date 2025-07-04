@@ -2,7 +2,7 @@
 import React from 'react'
 import Progress from '@/components/ui/Progress'
 import classNames from '@/utils/classNames'
-import type { StepProgressProps } from '../../../@types/onboarding'
+import type { StepProgressProps } from '../../../@types/onboard'
 
 export const StepProgress: React.FC<StepProgressProps> = ({
     currentStep,
