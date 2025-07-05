@@ -6,7 +6,6 @@ import PreLoginLayout from './PreLoginLayout'
 import { useThemeStore } from '@/store/themeStore'
 import type { CommonProps } from '@/@types/common'
 
-
 const LoadingFallback = () => (
     <div className="flex flex-auto flex-col h-[100vh]">
         <Loading loading={true} />
@@ -17,11 +16,6 @@ const Layout = ({ children }: CommonProps) => {
     const { isAuthenticated } = useAuth0()
     const layoutType = useThemeStore((state) => state.layout.type)
 
-    console.log({
-        page: 'Layout',
-        isAuthenticated,
-        layoutType,
-    })
     const renderLayout = () => {
         if (isAuthenticated) {
             return (
@@ -30,6 +24,7 @@ const Layout = ({ children }: CommonProps) => {
                 </PostLoginLayout>
             )
         }
+
         return <PreLoginLayout>{children}</PreLoginLayout>
     }
 

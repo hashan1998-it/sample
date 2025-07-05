@@ -1,108 +1,82 @@
-import ProtectedRoute from './ProtectedRoute'
-import PublicRoute from './PublicRoute'
-import AuthorityGuard from './AuthorityGuard'
-import AppRoute from './AppRoute'
-import PageContainer from '@/components/template/PageContainer'
+import RouteWrapper from './RouteWrapper'
 import { protectedRoutes, publicRoutes } from '@/configs/routes.config'
 import appConfig from '@/configs/app.config'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useMemo, useEffect } from 'react'
 import type { LayoutType } from '@/@types/theme'
-import { useOnboardStatus } from '@/utils/hooks/useOnboardStatus'
-import { useAuth } from '@/auth'
-import Loading from '../shared/Loading'
+import useAuth from '@/utils/hooks/useAuth'
+import { apiCheckOnboardingStatus } from '@/services/OnboardService'
+
+const { authenticatedEntryPath } = appConfig
 
 interface ViewsProps {
     pageContainerType?: 'default' | 'gutterless' | 'contained'
     layout?: LayoutType
 }
 
-type AllRoutesProps = ViewsProps
+const AllRoutes = (props: ViewsProps) => {
+    const { isAuthenticated, user, token } = useAuth()
+    const location = useLocation()
+    const currentPath = useMemo(() => location.pathname, [location.pathname])
 
-const { authenticatedEntryPath } = appConfig
-
-const AllRoutes = (props: AllRoutesProps) => {
-    const { authenticated, user } = useAuth()
-    const {
-        isLoading: onboardingLoading,
-        shouldRedirectToOnboard,
-        redirectPath,
-    } = useOnboardStatus()
-
-    // Enhanced ProtectedRoute component that handles onboarding
-    const EnhancedProtectedRoute = ({
-        children,
-    }: {
-        children: React.ReactNode
-    }) => {
-        if (onboardingLoading) {
-            return <Loading loading={true} />
+    // Check onboarding status when component mounts and user is authenticated
+    useEffect(() => {
+        const checkStatus = async () => {
+            const status = await apiCheckOnboardingStatus(token)
+            console.log('Onboarding Status:', status)
         }
-        if (
-            shouldRedirectToOnboard &&
-            window.location.pathname !== '/onboard'
-        ) {
-            return <Navigate replace to={redirectPath || '/onboard'} />
+        if (isAuthenticated && token) {
+            checkStatus()
         }
-        return <ProtectedRoute>{children}</ProtectedRoute>
-    }
+    }, [isAuthenticated, token])
 
     return (
         <Routes>
+            {publicRoutes.map((route) => (
+                <Route
+                    key={route.path}
+                    path={route.path}
+                    element={
+                        <RouteWrapper
+                            route={route}
+                            isProtected={false}
+                            {...props}
+                        />
+                    }
+                />
+            ))}
+            {protectedRoutes.map((route, index) => (
+                <Route
+                    key={route.key + index}
+                    path={route.path}
+                    element={
+                        <RouteWrapper
+                            route={route}
+                            isProtected={true}
+                            userAuthority={user?.authority || []}
+                            {...props}
+                        />
+                    }
+                />
+            ))}
             <Route
                 path="/"
                 element={
-                    <EnhancedProtectedRoute>
-                        <Route
-                            path="/"
-                            element={
-                                <Navigate replace to={authenticatedEntryPath} />
-                            }
-                        />
-                        {authenticated &&
-                            protectedRoutes.map((route, index) => (
-                                <Route
-                                    key={route.key + index}
-                                    path={route.path}
-                                    element={
-                                        <AuthorityGuard
-                                            userAuthority={
-                                                user?.authority || []
-                                            }
-                                            authority={route.authority}
-                                        >
-                                            <PageContainer
-                                                {...props}
-                                                {...route.meta}
-                                            >
-                                                <AppRoute
-                                                    routeKey={route.key}
-                                                    component={route.component}
-                                                    {...route.meta}
-                                                />
-                                            </PageContainer>
-                                        </AuthorityGuard>
-                                    }
-                                />
-                            ))}
-                        <Route path="*" element={<Navigate replace to="/" />} />
-                    </EnhancedProtectedRoute>
+                    currentPath === '/' ? (
+                        isAuthenticated ? (
+                            <Navigate replace to={authenticatedEntryPath} />
+                        ) : (
+                            <Navigate replace to="/sign-in" />
+                        )
+                    ) : null
                 }
-            ></Route>
-            <Route path="/" element={<PublicRoute />}>
-                {publicRoutes.map((route) => (
-                    <Route
-                        key={route.path}
-                        path={route.path}
-                        element={
-                            <AppRoute
-                                routeKey={route.key}
-                                component={route.component}
-                                {...route.meta}
-                            />
-                        }
-                    />
-                ))}
-            </Route>
+            />
+            <Route
+                path="*"
+                element={
+                    <Navigate replace to={isAuthenticated ? '/' : '/sign-in'} />
+                }
+            />
         </Routes>
     )
 }

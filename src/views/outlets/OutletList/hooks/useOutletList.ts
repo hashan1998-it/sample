@@ -53,11 +53,8 @@ const useOutletList = () => {
         },
     )
 
-    console.log('tabledata', tableData)
     const outletList = data?.getOutlets || []
-    console.log('outletList', outletList)
     const outletListTotal = outletList.length || 0
-    console.log('outletListTotal', outletListTotal)
 
     return {
         error,

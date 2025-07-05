@@ -1,6 +1,6 @@
 import { BrowserRouter } from 'react-router-dom'
 import Theme from '@/components/template/Theme'
-import Layout from '@/components/layouts'
+import Layout from '@/components/layouts/RouteLayout'
 import Views from '@/views'
 import appConfig from './configs/app.config'
 import { Auth0Provider } from '@auth0/auth0-react'

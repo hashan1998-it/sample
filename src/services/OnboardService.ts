@@ -1,4 +1,3 @@
-// src/services/OnboardService.ts - Auth0 Compatible Version
 import { graphqlRequest } from '@/services/GraphQLService'
 import {
     GET_USER_BY_IDENTITY_ID_STRING,
@@ -21,10 +20,12 @@ import type {
  * Get user data by identity ID (Auth0 sub)
  * Note: This should use the Auth0 user.sub as the identity ID
  */
-export async function apiGetUserByIdentityId(): Promise<UserByIdentityResponse | null> {
+export async function apiGetUserByIdentityId(token?: string | null): Promise<UserByIdentityResponse | null> {
     try {
         const response = await graphqlRequest<UserByIdentityResponse>(
             GET_USER_BY_IDENTITY_ID_STRING,
+            {},
+            { token }
         )
         return response
     } catch (error) {
@@ -36,10 +37,12 @@ export async function apiGetUserByIdentityId(): Promise<UserByIdentityResponse |
 /**
  * Get merchant data by owner ID
  */
-export async function apiGetMerchantByOwnerId(): Promise<MerchantByOwnerResponse | null> {
+export async function apiGetMerchantByOwnerId(token?: string | null): Promise<MerchantByOwnerResponse | null> {
     try {
         const response = await graphqlRequest<MerchantByOwnerResponse>(
             GET_MERCHANT_BY_OWNER_ID_STRING,
+            {},
+            { token }
         )
         return response
     } catch (error) {
@@ -97,6 +100,7 @@ function transformToMerchantData(formData: OnboardFormData): MerchantData {
  */
 export async function apiOnboardUser(
     formData: OnboardFormData,
+    token?: string | null,
 ): Promise<OnboardingResult> {
     try {
         const userData = transformToUserData(formData)
@@ -104,6 +108,7 @@ export async function apiOnboardUser(
         const response = await graphqlRequest<{ onboardUser: UserData }>(
             ONBOARD_USER_STRING,
             { data: userData },
+            { token }
         )
 
         if (response.onboardUser) {
@@ -134,13 +139,14 @@ export async function apiOnboardUser(
  */
 export async function apiOnboardMerchant(
     formData: OnboardFormData,
+    token?: string | null,
 ): Promise<OnboardingResult> {
     try {
         const merchantData = transformToMerchantData(formData)
 
         const response = await graphqlRequest<{
             onboardMerchant: MerchantData
-        }>(ONBOARD_MERCHANT_STRING, { data: merchantData })
+        }>(ONBOARD_MERCHANT_STRING, { data: merchantData }, { token })
 
         if (response.onboardMerchant) {
             return {
@@ -170,16 +176,17 @@ export async function apiOnboardMerchant(
  */
 export async function apiCompleteOnboarding(
     formData: OnboardFormData,
+    token?: string | null,
 ): Promise<OnboardingResult> {
     try {
         // First, onboard the user
-        const userResult = await apiOnboardUser(formData)
+        const userResult = await apiOnboardUser(formData, token)
         if (!userResult.success) {
             return userResult
         }
 
         // Then, onboard the merchant
-        const merchantResult = await apiOnboardMerchant(formData)
+        const merchantResult = await apiOnboardMerchant(formData, token)
         if (!merchantResult.success) {
             return {
                 success: false,
@@ -206,7 +213,7 @@ export async function apiCompleteOnboarding(
 /**
  * Check onboarding status for current user (Auth0 compatible)
  */
-export async function apiCheckOnboardingStatus(): Promise<{
+export async function apiCheckOnboardingStatus(token?: string | null): Promise<{
     hasUser: boolean
     hasMerchant: boolean
     shouldRedirectToOnboard: boolean
@@ -214,8 +221,8 @@ export async function apiCheckOnboardingStatus(): Promise<{
 }> {
     try {
         const [userResponse, merchantResponse] = await Promise.allSettled([
-            apiGetUserByIdentityId(),
-            apiGetMerchantByOwnerId(),
+            apiGetUserByIdentityId(token),
+            apiGetMerchantByOwnerId(token),
         ])
 
         // Handle user data
